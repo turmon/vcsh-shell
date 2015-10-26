@@ -1,0 +1,35 @@
+# This file controls the behavior of line input editing for
+# programs that use the GNU Readline library.  Existing
+# programs include FTP, Bash, and GDB.
+#
+$if Bash
+  # only in bash
+  Space: magic-space
+  "\C-p": history-search-backward
+  "\C-n": history-search-forward
+  # Make C-w use / or space as word boundary and M-Del use spaces.
+  # Below line keeps readline from binding ctrl-W to its usual tty default
+  set bind-tty-special-chars off
+  "\C-w": unix-filename-rubout 
+  M-Rubout: unix-word-rubout 
+$endif
+
+# show partially-complete matches
+set show-all-if-ambiguous on
+
+# if there are more than N possible completions for
+# a word, ask the user to see all of them
+set completion-query-items 100
+
+# do not list dotfiles on expansion
+set match-hidden-files off
+
+# symlink dirs also have / appended
+set mark-symlinked-directories on
+
+# file type char marks completions (eg symlinks)
+set visible-stats on
+
+# don't page large completions
+set page-completions off
+
