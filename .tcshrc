@@ -1,0 +1,148 @@
+# .tcshrc
+# 
+# mjt recreated 15 sep 1997
+# 
+if (-e $HOME/.cshrc) then
+	source $HOME/.cshrc
+endif
+#
+# exit now on noninteractive shell
+if ($?USER == 0 || $?prompt == 0) exit
+#
+# tcsh-specific initializations
+#
+# any definitions made in .cshrc are overwritten
+#
+# VARIABLES
+set symlinks=expand  # try to maintain coherent path through symlinks
+set echo_style=both  # allow -n option and backslash notation
+set color
+set colorcat
+# Watch any(1) other users every X minutes from any(2) console
+# set watch=(0 any any)
+# BINDINGS
+bindkey "^Z" run-fg-editor	# ^Z runs $EDITOR if it is stopped
+bindkey "^W" backward-delete-word
+bindkey ' '  magic-space	# expand hist subs on space
+bindkey '^G' list-glob          # list files of regexp
+bindkey '^[g' expand-glob       # expand files of regexp
+bindkey '^@' complete-word-fwd  # C-space plugs in completable words (cf tab)
+bindkey '^[^I' complete-word-fwd  # M-tab plugs in completable words (cf tab)
+bindkey '^R' i-search-back      # don't use this much
+bindkey '^P'    history-search-backward # matlab-style search
+bindkey -k up   history-search-backward
+bindkey '^N'    history-search-forward
+bindkey -k down history-search-forward
+bindkey '^[-' copy-prev-word    # !$, by analogy with M-_ = insert-last-word
+bindkey '^[[25~' run-help       # F13 on mac
+
+# PROMPT
+set prompt = "\012%B%m:%c3%b %% "
+# if ( $?PRINTER == 0 ) then
+#     setenv PRINTER aighp5
+# endif
+# COMPLETIONS
+# attempt to set hosts up from file
+if ( $?HOSTNAMELIST == 0 ) then
+    if ( -f $HOME/.hostnames ) then
+        setenv HOSTNAMELIST `cat $HOME/.hostnames`
+    endif
+endif
+# otherwise literally
+if ( $?HOSTNAMELIST ) then
+    set hostnames = ( $HOSTNAMELIST )
+else
+    set hostnames = ( hanz.jpl.nasa.gov franz.jpl.nasa.gov )
+endif
+
+set noglob # ignore *'s etc in complete's below
+# shell state variables
+complete unset    'p/1/s/'
+complete set	  'c/*=/f/' 'p/1/s/=' 'n/=/f/'  # fall back to var=/file
+complete unsetenv 'p/1/e/'
+complete setenv	  'p/1/e/' 'c/*:/f/'          # fall back to file:file
+# shell internals
+complete alias   'p/1/a/'
+complete unalias 'p/1/a/'
+complete {,un}limit c/-/"(h)"/ n/*/l/
+# directories
+complete {c,push,pop}d	'C/*/d/'
+complete rmdir 'C/*/d/'
+# use available commands as arguments
+complete {man,openman,which,where,whereis} 'p/1/c/'
+complete sudo  'p/1/c/'
+# kill with signal names
+complete kill 'c/-/S/' 'p/1/(-)//' 'c/%/j/' \
+	 'C/[0-9]*/`ps | awk '"'"'{print $1}'"'"'`/'
+#complete kill 'c/-/S/'
+# file operations
+complete chgrp 'n/-*/g/' 'p/1/g/'             # arg1 or arg after -opt -> g
+complete chown 'c/*:/g/' 'n/-*/u/:' 'p/1/u/'  # above, plus user:group syntax
+# C compilers: -I,-L match directories; plus completion on filenames
+complete  cc 'c/-[IL]/d/' 'n/*/f:*.{c,C,CC,cc,o,a,s,i}/'
+complete gcc 'c/-[IL]/d/' 'n/*/f:*.{c,C,CC,cc,o,a,s,i}/'
+# tex compilers
+complete xdvi 'p/*/f:*.dvi/'
+complete ghostview 'p/*/f:*.{ps,eps}/'
+complete dvips 'p/*/f:*.dvi/'
+complete pstopdf 'p/*/f:*.{ps,eps,epsf,epsc}/'
+complete latex 'p/*/f:*.{tex,dtx,ltx,ins}/'
+# find
+complete find 	n/-fstype/"(nfs 4.2)"/ n/-name/f/ \
+	  	n/-type/"(c b d f p l s)"/ n/-user/u/ n/-group/g/ \
+		n/-exec/c/ n/-ok/c/ n/-cpio/f/ n/-ncpio/f/ n/-newer/f/ \
+	  	c/-/"(fstype name perm prune type user nouser \
+	  	group nogroup size inum atime mtime ctime exec \
+		ok print ls cpio ncpio newer xdev depth \
+		daystart follow maxdepth mindepth noleaf version \
+		anewer cnewer amin cmin mmin true false uid gid \
+		ilname iname ipath iregex links lname empty path \
+		regex used xtype fprint fprint0 fprintf \
+		print0 printf not a and o or)"/ \
+		n/*/d/
+# simple network stuff
+complete {ping,traceroute,rlogin,telnet,rsh,ftp,nslookup} 'p/1/$hostnames/'
+complete firefox-proxy 'p/1/$hostnames/'
+# ssh: support -l user and user@host; no need to support "ssh host command"
+# which causes confusion when other args are supplied
+complete ssh  'n/-l/u/' 'c/*@/$hostnames/' 'p/*/$hostnames/'
+complete sftp 'n/-l/u/' 'c/*@/$hostnames/' 'p/*/$hostnames/'
+# scp completion is tricky
+#   1: machine:/ completes to files rooted in / (using , as delimiter)
+#   2: machine: completes to files rooted in (local) $HOME (interpolated by ")
+#   3: user@ completes in list of $hostnames
+#   4: ./$~ completes to files
+#   5: nothing completes in list of $hostnames
+# Note: to complete to a file not a host, use ./<tab> or /<tab> (rule 4)
+complete scp 'c,*:/,F:/,' "c,*:,F:$HOME," 'c/*@/$hostnames/:/' \
+	'C,[./$~],f,' 'n/*/$hostnames/:'
+complete {lsync,rsync} 'c,*:/,F:/,' "c,*:,F:$HOME," 'c/*@/$hostnames/:/' \
+	'C,[./$~],f,' 'n/*/$hostnames/:'
+#
+unset noglob
+
+# special shell aliases
+alias helpcommand 'openman \!:1' # works on mac
+# Change the title bar
+if ( ${?TERM} ) then
+  switch ( $TERM )
+      case "dtterm*":         # dtterm
+      case "xterm*":          # xterm
+              alias sethead 'echo -n "\033]2;\!*\007"'
+              alias cwdcmd  'sethead "${HOST}:${PWD}"'
+              breaksw;
+      case "sun*":            # SunView cmdtool/shelltool
+              alias sethead 'echo -n "\033]l\!*\033\\"'
+              alias cwdcmd  'sethead "${HOST}:${PWD}"'
+              breaksw;
+      case "vt[24]20*":       # TNVT and SecureCRT (Windows clients)
+              alias sethead 'echo -n "\033]0;\!*\007\033\\"'
+              alias cwdcmd  'sethead "${HOST}:${PWD}"'
+              breaksw;
+      default:
+              alias sethead echo -n ""
+              unalias cwdcmd
+  endsw
+sethead "${HOST}:${PWD}"
+endif
+
